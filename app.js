@@ -78,6 +78,24 @@ var budgetController = (function(){
             
         },
 
+        deleteItem: function(type, id){
+            var ids, index;
+
+            //we loop over the data structure and create a list with the obj ids
+            ids = data.allItems[type].map(function(curr){
+                return curr.id;
+            });
+
+            //the we retrieve the id of the obj we want
+            index = ids.indexOf(id);
+
+            //then we remove if it exists
+            if (index !== -1){
+                data.allItems[type].splice(index, 1);
+            }
+
+        },
+
         calculateBudget: function(){
 
 
@@ -109,6 +127,7 @@ var budgetController = (function(){
             }
         },
 
+
         //JUST FOR TESTING. MUST BE DELETED
         testing: function(){
             console.log(data);
@@ -134,7 +153,8 @@ var UIController = (function(){
         budgetLabel: '.budget__value',
         incomeLabel: '.budget__income--value',
         expenseLabel: '.budget__expenses--value', 
-        percentageLabel: '.budget__expenses--percentage'
+        percentageLabel: '.budget__expenses--percentage',
+        container: '.container'
     }
     return {
         //we use the return statement to make the methods public
@@ -161,12 +181,12 @@ var UIController = (function(){
             //1. create HTML string with placeholder text
             if(type === 'inc'){
                 element = DOMstrings.incomeContainer;
-                html = '<div class="item clearfix" id="income-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+                html = '<div class="item clearfix" id="inc-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
                 //%id% is a placeholder for the actual id
             }
             else if(type === 'exp'){
                 element = DOMstrings.expenseContainer;
-                html = '<div class="item clearfix" id="expense-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+                html = '<div class="item clearfix" id="exp-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
             }
 
 
@@ -181,6 +201,15 @@ var UIController = (function(){
             //https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML = about the insert adjacent method
             document.querySelector(element).insertAdjacentHTML('beforeend',newHtml);
         
+        },
+
+        deleteListItem: function(selectorId,){
+            //we're goin to use the entire html id ("inc-1" or "exp-0")
+
+            var element = document.getElementById(selectorId);
+
+            element.parentNode.removeChild(element);
+
         },
 
         clearFields: function(){
@@ -245,6 +274,9 @@ var controller = (function(budgetCtrl, UICtrl){
                 ctrlAddItem();
             }
         });
+
+        document.querySelector(DOM.container).addEventListener('click',ctrlDeleteItem);
+
     };
 
 
@@ -261,7 +293,7 @@ var controller = (function(budgetCtrl, UICtrl){
 
     
 
-    //function that will be executed on the event handlers
+    //functions that will be executed on the event handlers
     var ctrlAddItem = function(){
 
         var input, newItem;
@@ -284,6 +316,34 @@ var controller = (function(budgetCtrl, UICtrl){
         updateBudget();
         }
     };
+
+    
+    var ctrlDeleteItem = function(event){
+
+
+        var itemId, splitID, type, ID;
+        
+        //we look for 4 generations of parents of the target of the event using "parentNode"
+        //then we retain the "ID" of this element
+        itemId = event.target.parentNode.parentNode.parentNode.parentNode.id;
+
+        if(itemId){
+
+            splitID = itemId.split('-');
+            type = splitID[0];
+            ID = parseInt(splitID[1]);
+
+            // 1. delete item from the data structure
+            budgetCtrl.deleteItem(type, ID);
+
+            // 2. Delete the item from the UI
+            UICtrl.deleteListItem(itemId);
+
+            // 3. Update and show the new budget
+            updateBudget();
+        }
+
+    }
 
     
 
