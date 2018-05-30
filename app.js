@@ -195,8 +195,48 @@ var UIController = (function(){
         expenseLabel: '.budget__expenses--value', 
         percentageLabel: '.budget__expenses--percentage',
         container: '.container',
-        expensesPercLabel: '.item__percentage'
-    }
+        expensesPercLabel: '.item__percentage',
+        dateLabel: '.budget__title--month'
+    };
+
+    //private function created to format the numbers, showing the thousands and decimal points
+    var formatNumber = function(num, type){
+        var numSplit, int, dec;
+        // + or - before the number
+        // 2 decimal points
+        // comma separating the thousands
+        
+        num = Math.abs(num);
+
+        //.toFixed is a method of the Number object prototype
+        //now the num variable will always have two decimal numbers
+        num = num.toFixed(2);
+            
+        numSplit = num.split('.');
+        int = numSplit[0];
+        if (int.length>3){
+            //we use the length to be sure that will fit all the casas
+            int = int.substr(0,int.length-3) + ',' + int.substr(int.length-3,int.length);
+            // if input = 2310, output = 2,310
+        }
+
+        dec = numSplit[1];
+
+        
+        // if the type === 'exp' add the minus sign to the return string, else add the plus sign
+        return (type === 'exp' ? '-' : '+') + ' ' + int + '.' + dec;
+
+    };
+
+    //private method used to manipulate the nodelist
+    var nodeListForEach = function(list, callback){
+        for (var i = 0; i < list.length; i++){
+            //we're gonna pass the current item and its index
+            callback(list[i], i);
+        }
+    };
+
+
     return {
         //we use the return statement to make the methods public
         getinput: function(){
@@ -234,7 +274,7 @@ var UIController = (function(){
             //2. Replace the placeholder text with the actual data
             newHtml = html.replace('%id%',obj.id);
             //the replace method on the string object allow us to replace some part or placeholder for another thing we want
-            newHtml = newHtml.replace('%value%',obj.value);
+            newHtml = newHtml.replace('%value%',formatNumber(obj.value, type));
             newHtml = newHtml.replace('%description%',obj.description);
 
 
@@ -272,10 +312,13 @@ var UIController = (function(){
         },
 
         displayBudget: function(obj){
-            
-            document.querySelector(DOMstrings.incomeLabel).textContent = obj.totalInc;
-            document.querySelector(DOMstrings.expenseLabel).textContent = obj.totalExp;
-            document.querySelector(DOMstrings.budgetLabel).textContent = obj.budget;
+            var type;
+
+            obj.budget > 0 ? type = 'inc': type = 'exp';
+
+            document.querySelector(DOMstrings.incomeLabel).textContent = formatNumber(obj.totalInc, 'inc');
+            document.querySelector(DOMstrings.expenseLabel).textContent = formatNumber(obj.totalExp, 'exp');
+            document.querySelector(DOMstrings.budgetLabel).textContent = formatNumber(obj.budget,type);
             
             if(obj.percentage > 0){
                 document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage +' %';
@@ -286,17 +329,13 @@ var UIController = (function(){
 
         },
 
+
         displayPercentages: function(percentages){
 
             //fields will be a nodelist with all instances of the "item__percentage" class
             var fields = document.querySelectorAll(DOMstrings.expensesPercLabel);
 
-            var nodeListForEach = function(list, callback){
-                for (var i = 0; i < list.length; i++){
-                    //we're gonna pass the current item and its index
-                    callback(list[i], i);
-                }
-            };
+            
 
             nodeListForEach(fields, function(curr, index){
 
@@ -310,6 +349,36 @@ var UIController = (function(){
             });
 
         },
+
+        //function that uses the date object to display the current month and year
+        displayMonth: function (){
+            var now, year, month, months;
+
+            now = new Date();
+            year = now.getFullYear();
+            
+            months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            month = now.getMonth();
+
+            document.querySelector(DOMstrings.dateLabel).textContent = months[month] + ' '+ year;
+
+        },
+
+        changedType: function(){
+
+            var fields = document.querySelectorAll(
+                DOMstrings.inputType + ',' +
+                DOMstrings.inputDescription + ',' +
+                DOMstrings.inputValue);
+
+            nodeListForEach(fields, function(curr){
+                curr.classList.toggle('red-focus');
+            });
+
+            document.querySelector(DOMstrings.inputBtn).classList.toggle('red');
+
+        },
+        
 
         getDOMstrings: function(){
             //this is a privilege method that exposes the DOMstrings objetc to the other modules
@@ -342,6 +411,10 @@ var controller = (function(budgetCtrl, UICtrl){
         });
 
         document.querySelector(DOM.container).addEventListener('click',ctrlDeleteItem);
+
+        document.querySelector(DOM.inputType).addEventListener('change', UICtrl.changedType);
+
+        
 
     };
 
@@ -436,12 +509,14 @@ var controller = (function(budgetCtrl, UICtrl){
     return {
         init: function(){
             console.log('Application has started.');
+            UICtrl.displayMonth();
             UICtrl.displayBudget({
                 budget: 0,
                 totalInc: 0,
                 totalExp: 0,
                 percentage: 0});
             setupEventListeners();
+            
         }
     };
 
