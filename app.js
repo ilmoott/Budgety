@@ -5,8 +5,25 @@ var budgetController = (function(){
     var Expense = function(id,description,value){
         this.id = id,
         this.description = description,
-        this.value = value
+        this.value = value,
+        this.percentage = -1
     };
+
+    //including a method to calculate the percentage to the obj prototype
+    Expense.prototype.calcPercentage = function(totalIncome){
+
+        if (totalIncome > 0){
+            this.percentage = Math.round((this.value / totalIncome)*100);
+        }
+        else{
+            this.percentage = -1;
+        }
+    };
+
+    Expense.prototype.getPercentage = function(){
+        return this.percentage
+    };
+
 
     var Income = function(id, description, value){
         this.id = id,
@@ -118,6 +135,29 @@ var budgetController = (function(){
 
         },
 
+        //method the uses the calPercentage method created on the Expense prototype to calculate
+        //the percentages of all expanses
+        calculatePercentages: function (){
+
+            data.allItems.exp.forEach(function(curr){
+                //the calcPercentage ask for a argument == Total Income
+                curr.calcPercentage(data.totals.inc);
+            });
+
+        },
+
+
+        //method to get the percentages and store them in an array
+        getPercentages: function(){
+            var allPerc;
+
+            allPerc = data.allItems.exp.map(function(curr){
+                return curr.getPercentage();
+            });
+
+            return allPerc;
+        },
+
         getBudget: function (){
             return {
                 budget: data.budget,
@@ -154,7 +194,8 @@ var UIController = (function(){
         incomeLabel: '.budget__income--value',
         expenseLabel: '.budget__expenses--value', 
         percentageLabel: '.budget__expenses--percentage',
-        container: '.container'
+        container: '.container',
+        expensesPercLabel: '.item__percentage'
     }
     return {
         //we use the return statement to make the methods public
@@ -245,6 +286,31 @@ var UIController = (function(){
 
         },
 
+        displayPercentages: function(percentages){
+
+            //fields will be a nodelist with all instances of the "item__percentage" class
+            var fields = document.querySelectorAll(DOMstrings.expensesPercLabel);
+
+            var nodeListForEach = function(list, callback){
+                for (var i = 0; i < list.length; i++){
+                    //we're gonna pass the current item and its index
+                    callback(list[i], i);
+                }
+            };
+
+            nodeListForEach(fields, function(curr, index){
+
+                if (percentages[index] > 0){
+                    curr.textContent = percentages[index]+' %';
+                }
+                else{
+                    curr.textContent = '-';
+                }
+
+            });
+
+        },
+
         getDOMstrings: function(){
             //this is a privilege method that exposes the DOMstrings objetc to the other modules
             return DOMstrings;
@@ -291,6 +357,19 @@ var controller = (function(budgetCtrl, UICtrl){
         UICtrl.displayBudget(budget);
     };
 
+
+    var updatePercentages = function(){
+
+        // 1. Calculate the percentages
+        budgetCtrl.calculatePercentages();
+
+        // 2. Read percentages from the budget controller
+        var percentages = budgetCtrl.getPercentages();
+
+        // 3. Update the UI with the new percentages
+        UICtrl.displayPercentages(percentages);
+
+    };
     
 
     //functions that will be executed on the event handlers
@@ -310,10 +389,16 @@ var controller = (function(budgetCtrl, UICtrl){
 
         // 3. Add the new item to the UI
         UICtrl.addListItem(newItem,input.type);
+
+        //4. Clear the fields
         UICtrl.clearFields();
 
-
+        // 5. Calculate and update budget
         updateBudget();
+
+        // 6. Calculate and update percentages
+        updatePercentages();
+
         }
     };
 
